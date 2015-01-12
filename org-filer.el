@@ -25,7 +25,7 @@
   "Control string for the name of the file for filing."
   :group 'org-filer)
 
-(defcustom org-filer-merge-pdf-cmd "convert *.pnm -o '%s'"
+(defcustom org-filer-merge-pdf-cmd "convert *.pnm '%s'"
   "Command invoked to merge scanned images into a single pdf."
   :group 'org-filer
   :risky t)
@@ -92,8 +92,9 @@ Returns the value of body."
         (org-filer-scan-page
          (f-join default-directory
                  (format "%s%d.pnm" (f-base file-name) page-num)))
-        (incf page-num))
-      (org-filer-merge-pages-to-pdf default-directory file-name))))
+        (setf page-num (1+ page-num)))
+      (org-filer-merge-pages-to-pdf default-directory
+                                    (f-join (f-parent default-directory) file-name)))))
 
 (defun org-filer-continue-scan? (page-num)
   (if (= page-num 0)
@@ -104,15 +105,16 @@ Returns the value of body."
   "Use an attached scanner to scan a page to PAGE-FILE."
   (interactive "F")
   (message "Scanning %s... " page-file)
-  (call-process-shell-command
-   (format org-filer-scanner-cmd org-filer-scanner-cmd page-file))
-  (message "Finished scanning %s." page-file))
+  (let ((retval (call-process-shell-command
+                 (format org-filer-scanner-cmd page-file))))
+    (message "Finished scanning %s." page-file)
+    (if (= retval 0) t nil)))
 
 (defun org-filer-merge-pages-to-pdf (image-path pdf-file)
   "Merge all .PNM files in IMAGE-PATH into PDF-FILE."
   (message "Merging pages into %s... " pdf-file)
   (call-process-shell-command
-   (format org-filer-merge-pdf-command pdf-file)))
+   (format org-filer-merge-pdf-cmd pdf-file)))
 
 (provide 'org-filer)
 ;;; org-filer.el ends here
